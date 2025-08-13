@@ -9,27 +9,27 @@ dotenv.config();
 const app = express();
 
 // Middleware
-const allowedOrigins = [
-  'https://greencartlogistic.netlify.app',
-  'http://localhost:3000',
-  'http://192.168.1.17:3000'  // Your local network address
-];
+// CORS Configuration
+app.use((req, res, next) => {
+  const allowedOrigins = ['https://greencartlogistic.netlify.app', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-    }
-    return callback(null, true);
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+// Parse JSON bodies
 app.use(express.json());
 
 // Connect to MongoDB
@@ -46,12 +46,19 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .catch((err) => console.error('MongoDB connection error:', err));
 
-// Routes
+// Routes with /api prefix
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/drivers', require('./routes/drivers'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/simulation', require('./routes/simulation'));
+
+// Alternative routes without /api prefix (for backward compatibility)
+app.use('/auth', require('./routes/auth'));
+app.use('/drivers', require('./routes/drivers'));
+app.use('/routes', require('./routes/routes'));
+app.use('/orders', require('./routes/orders'));
+app.use('/simulation', require('./routes/simulation'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
