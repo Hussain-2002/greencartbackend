@@ -31,20 +31,36 @@ const login = async (req, res) => {
     
     const user = await User.findOne({ username });
     if (!user) {
+      console.log('Login failed: User not found -', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('Login failed: Invalid password for user -', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '24h'
-    });
+    // Create token with user role
+    const token = jwt.sign(
+      { 
+        userId: user._id,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
-    res.json({ user, token });
+    // Remove password from response
+    const userResponse = {
+      _id: user._id,
+      username: user.username,
+      role: user.role
+    };
+
+    res.json({ user: userResponse, token });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(400).json({ error: error.message });
   }
 };
